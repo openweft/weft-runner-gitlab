@@ -316,3 +316,124 @@ func TestNewGL_TrimsTrailingSlash(t *testing.T) {
 // ptrRunnerInfo is a tiny helper because Go has no &literal syntax for
 // struct-pointer-out-of-a-value when the value comes from a call.
 func ptrRunnerInfo(r runnerInfo) *runnerInfo { return &r }
+
+func TestRenderJobScript_SingleStep(t *testing.T) {
+	t.Parallel()
+	spec := &JobSpec{
+		ID:    1,
+		Token: "tok",
+		Steps: []JobStep{
+			{Name: "script", Script: []string{"echo hello", "make build"}},
+		},
+	}
+	out := renderJobScript(spec)
+	wantContains := []string{
+		"#!/bin/bash",
+		"set -e",
+		"# step 0: script (when=on_success allow_failure=false)",
+		"if [ \"$__weft_job_failed\" -eq 0 ]; then",
+		"echo hello",
+		"make build",
+		"$ === step: script ===",
+		"exit \"$__weft_job_failed\"",
+	}
+	for _, s := range wantContains {
+		if !strings.Contains(out, s) {
+			t.Errorf("rendered script missing %q\n--- script ---\n%s", s, out)
+		}
+	}
+}
+
+func TestRenderJobScript_OnFailureCleanup(t *testing.T) {
+	t.Parallel()
+	spec := &JobSpec{
+		ID: 2,
+		Steps: []JobStep{
+			{Name: "build", Script: []string{"make build"}},
+			{Name: "tests", Script: []string{"make test"}, AllowFailure: true},
+			{Name: "cleanup_on_fail", Script: []string{"rm -rf tmp/"}, When: "on_failure"},
+			{Name: "always", Script: []string{"echo bye"}, When: "always"},
+		},
+	}
+	out := renderJobScript(spec)
+	// on_failure gate: should branch on prior failure
+	if !strings.Contains(out, `# step 2: cleanup_on_fail (when=on_failure`) {
+		t.Errorf("missing on_failure step header:\n%s", out)
+	}
+	if !strings.Contains(out, "if [ \"$__weft_job_failed\" -ne 0 ]; then") {
+		t.Errorf("on_failure step does not gate on prior failure:\n%s", out)
+	}
+	// always step should be unconditional
+	if !strings.Contains(out, "# step 3: always (when=always") {
+		t.Errorf("missing always step header:\n%s", out)
+	}
+	if !strings.Contains(out, "if true; then") {
+		t.Errorf("always step is not unconditional:\n%s", out)
+	}
+	// allow_failure step should NOT promote failure
+	if !strings.Contains(out, "allow_failure=true, ignored") {
+		t.Errorf("allow_failure warning not emitted:\n%s", out)
+	}
+	// allow_failure must not contain the __weft_job_failed promotion line right after its rc check
+	tests := "# step 1: tests (when=on_success allow_failure=true)"
+	idx := strings.Index(out, tests)
+	if idx < 0 {
+		t.Fatalf("missing allow_failure step header:\n%s", out)
+	}
+	stepTwoIdx := strings.Index(out, "# step 2:")
+	if stepTwoIdx < 0 || stepTwoIdx <= idx {
+		t.Fatalf("step 2 header not after step 1: %d %d", idx, stepTwoIdx)
+	}
+	allowFailureBlock := out[idx:stepTwoIdx]
+	if strings.Contains(allowFailureBlock, "__weft_job_failed=$__weft_step_rc") {
+		t.Errorf("allow_failure step must not promote __weft_job_failed:\n%s", allowFailureBlock)
+	}
+}
+
+func TestRenderJobScript_VariablesPublicAndMasked(t *testing.T) {
+	t.Parallel()
+	spec := &JobSpec{
+		ID: 3,
+		Variables: []JobVariable{
+			{Key: "CI_COMMIT_SHA", Value: "abc123", Public: true},
+			{Key: "SECRET_TOKEN", Value: "s3cret", Public: false},
+		},
+		Steps: []JobStep{
+			{Name: "noop", Script: []string{"true"}},
+		},
+	}
+	out := renderJobScript(spec)
+	// Both variables are exported with real values
+	if !strings.Contains(out, "export CI_COMMIT_SHA='abc123'") {
+		t.Errorf("public var not exported with literal value:\n%s", out)
+	}
+	if !strings.Contains(out, "export SECRET_TOKEN='s3cret'") {
+		t.Errorf("masked var not exported with literal value (should still export):\n%s", out)
+	}
+	// Trace echo: public shows value, masked shows [MASKED]
+	if !strings.Contains(out, "$ export CI_COMMIT_SHA=abc123") {
+		t.Errorf("public var echo does not show value:\n%s", out)
+	}
+	if !strings.Contains(out, "$ export SECRET_TOKEN=[MASKED]") {
+		t.Errorf("masked var echo leaks value or wrong format:\n%s", out)
+	}
+	if strings.Contains(out, "$ export SECRET_TOKEN=s3cret") {
+		t.Errorf("masked var leaked plaintext value in echo:\n%s", out)
+	}
+}
+
+func TestRenderJobScript_QuotesSafely(t *testing.T) {
+	t.Parallel()
+	// shQuote must handle embedded single quotes (the value-with-apostrophe
+	// case) without producing invalid bash.
+	spec := &JobSpec{
+		Variables: []JobVariable{
+			{Key: "MSG", Value: "it's fine", Public: true},
+		},
+	}
+	out := renderJobScript(spec)
+	want := `export MSG='it'\''s fine'`
+	if !strings.Contains(out, want) {
+		t.Errorf("expected single-quote-escaped export, missing %q:\n%s", want, out)
+	}
+}

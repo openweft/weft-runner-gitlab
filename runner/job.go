@@ -55,6 +55,10 @@ func dispatchJob(ctx context.Context, g *gl, weftEndpoint, image string, spec *J
 	if err := os.WriteFile(filepath.Join(cfgDir, "gitlab-job.json"), specBytes, 0o600); err != nil {
 		return fmt.Errorf("write gitlab-job.json: %w", err)
 	}
+	script := renderJobScript(spec)
+	if err := os.WriteFile(filepath.Join(cfgDir, "gitlab-script.sh"), []byte(script), 0o755); err != nil {
+		return fmt.Errorf("write gitlab-script.sh: %w", err)
+	}
 
 	jobImage := image
 	if spec.Image.Name != "" {
