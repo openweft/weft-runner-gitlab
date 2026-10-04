@@ -13,19 +13,19 @@
 //
 // # Components
 //
-//	[GitLab Service] ⇄ runner/gitlab.go ⇄ runner/runner.go ⇄ runner/job.go ⇄ [weft cluster]
-//	         /api/v4 + long-poll     lifecycle         per-job            gRPC
+//		[GitLab Service] ⇄ runner/gitlab.go ⇄ runner/runner.go ⇄ runner/job.go ⇄ [weft cluster]
+//		         /api/v4 + long-poll     lifecycle         per-job            gRPC
 //
-//   - runner/gitlab.go: registers the runner against an instance / group /
-//     project via POST /api/v4/runners with a runner registration token ;
-//     long-polls POST /api/v4/jobs/request for assigned jobs ; reports
-//     completion via PUT /api/v4/jobs/{id} and ships logs via PATCH
-//     /api/v4/jobs/{id}/trace.
-//   - runner/runner.go: the daemon loop — owns the connection to GitLab, the
-//     connection to weft, and the per-job state machine.
-//   - runner/job.go: turns one job spec into a microVM lifecycle —
-//     RegisterMicroVM → StartVM → stream output → DeleteVM — with a cancel
-//     path tied to GitLab's job cancellation flag.
+//	  - runner/gitlab.go: registers the runner against an instance / group /
+//	    project via POST /api/v4/runners with a runner registration token ;
+//	    long-polls POST /api/v4/jobs/request for assigned jobs ; reports
+//	    completion via PUT /api/v4/jobs/{id} and ships logs via PATCH
+//	    /api/v4/jobs/{id}/trace.
+//	  - runner/runner.go: the daemon loop — owns the connection to GitLab, the
+//	    connection to weft, and the per-job state machine.
+//	  - runner/job.go: turns one job spec into a microVM lifecycle —
+//	    RegisterMicroVM → StartVM → stream output → DeleteVM — with a cancel
+//	    path tied to GitLab's job cancellation flag.
 //
 // # Sibling runners
 //
