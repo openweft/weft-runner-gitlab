@@ -68,14 +68,14 @@ type regResponse struct {
 // `info` carries the runner's self-description; GitLab uses it to populate
 // the runner detail page. We send a minimal-but-honest set.
 type registerRequest struct {
-	Token           string   `json:"token"`             // *registration* token (group/project)
-	Description     string   `json:"description,omitempty"`
-	TagList         []string `json:"tag_list,omitempty"`
-	RunUntagged     bool     `json:"run_untagged,omitempty"`
-	Locked          bool     `json:"locked,omitempty"`
-	AccessLevel     string   `json:"access_level,omitempty"` // "not_protected" | "ref_protected"
-	MaximumTimeout  int      `json:"maximum_timeout,omitempty"`
-	Info            *runnerInfo `json:"info,omitempty"`
+	Token          string      `json:"token"` // *registration* token (group/project)
+	Description    string      `json:"description,omitempty"`
+	TagList        []string    `json:"tag_list,omitempty"`
+	RunUntagged    bool        `json:"run_untagged,omitempty"`
+	Locked         bool        `json:"locked,omitempty"`
+	AccessLevel    string      `json:"access_level,omitempty"` // "not_protected" | "ref_protected"
+	MaximumTimeout int         `json:"maximum_timeout,omitempty"`
+	Info           *runnerInfo `json:"info,omitempty"`
 }
 
 type runnerInfo struct {
@@ -154,9 +154,9 @@ func (g *gl) unregisterRunner(ctx context.Context, runnerToken string) error {
 // flattened `steps` array GitLab assembles from .gitlab-ci.yml's
 // before_script + script + after_script.
 type JobSpec struct {
-	ID    int64     `json:"id"`
-	Token string    `json:"token"` // job-token used for trace + update
-	Image JobImage  `json:"image"`
+	ID        int64         `json:"id"`
+	Token     string        `json:"token"` // job-token used for trace + update
+	Image     JobImage      `json:"image"`
 	Variables []JobVariable `json:"variables"`
 	Steps     []JobStep     `json:"steps"`
 }
@@ -184,8 +184,8 @@ type JobVariable struct {
 // before_script + script + after_script into a flat .steps[] array; each
 // entry carries its own `when` predicate and `allow_failure` flag.
 //
-//   When ∈ {"on_success", "on_failure", "always"} — default on_success.
-//   AllowFailure: a non-zero exit must not fail the overall job.
+//	When ∈ {"on_success", "on_failure", "always"} — default on_success.
+//	AllowFailure: a non-zero exit must not fail the overall job.
 type JobStep struct {
 	Name         string   `json:"name"`
 	Script       []string `json:"script"`
@@ -281,7 +281,7 @@ func renderJobScript(spec *JobSpec) string {
 }
 
 // shQuote returns s wrapped in single-quotes safe for inclusion in a
-// POSIX shell command. We use the canonical `'\''` trick rather than
+// POSIX shell command. We use the canonical `'\”` trick rather than
 // %q's Go-style escapes because the latter is interpreted by bash as
 // double-quoted ANSI-C escapes and would mangle e.g. literal backslashes
 // in script lines.

@@ -15,9 +15,9 @@ import (
 
 // PersistedConfig is the on-disk shape of `weft-runner-gitlab register`.
 type PersistedConfig struct {
-	URL         string   `json:"url"`           // e.g. https://gitlab.com
-	RunnerID    int      `json:"runner_id"`     // returned by POST /runners
-	Token       string   `json:"token"`         // runner token, long-lived
+	URL         string   `json:"url"`       // e.g. https://gitlab.com
+	RunnerID    int      `json:"runner_id"` // returned by POST /runners
+	Token       string   `json:"token"`     // runner token, long-lived
 	Description string   `json:"description,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
 }
