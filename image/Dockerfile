@@ -26,16 +26,20 @@ RUN apt-get update \
         bash=\* \
     && rm -rf /var/lib/apt/lists/*
 
-# gitlab-runner publishes per-arch single-binary releases at the
-# `/latest/binaries/` path; TARGETARCH already matches their naming
-# (amd64|arm64) so no remap is needed.
+# gitlab-runner publishes per-arch single-binary releases at
+# `/<version>/binaries/`; TARGETARCH already matches their naming
+# (amd64|arm64) so no remap is needed. The version is pinned so every
+# image build carries a known gitlab-runner (and the Go toolchain it was
+# built with) instead of whatever `latest` resolves to that day.
+ARG GITLAB_RUNNER_VERSION=v19.5.1
+
 RUN set -eux; \
     case "${TARGETARCH}" in \
         amd64|arm64) : ;; \
         *) echo "unsupported arch: ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
     curl -fsSL -o /usr/local/bin/gitlab-runner \
-        "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-${TARGETARCH}"; \
+        "https://gitlab-runner-downloads.s3.amazonaws.com/${GITLAB_RUNNER_VERSION}/binaries/gitlab-runner-linux-${TARGETARCH}"; \
     chmod +x /usr/local/bin/gitlab-runner
 
 # uid 1000: matches the conventional non-root user inside the microVM.
