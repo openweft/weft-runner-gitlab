@@ -58,7 +58,8 @@ non-Debian base — is a private decision of this Dockerfile.
 
 ## gitlab-runner version
 
-We track the upstream `latest` channel at build time. Pin by replacing
-the URL in the Dockerfile with a versioned release (e.g.
-`/v17.0.0/binaries/gitlab-runner-linux-${TARGETARCH}`) when reproducible
-builds matter.
+The image pins an explicit gitlab-runner release through the
+`GITLAB_RUNNER_VERSION` build argument in the Dockerfile (currently
+`v19.5.1`), so each build is reproducible and carries a known Go toolchain.
+Bump it deliberately, or override it per build with
+`--build-arg GITLAB_RUNNER_VERSION=vX.Y.Z`.

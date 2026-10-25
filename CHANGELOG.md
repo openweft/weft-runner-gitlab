@@ -11,6 +11,12 @@ and this project aims to adhere to [Semantic Versioning](https://semver.org/spec
 
 - Real script extraction for GitLab `JobSpec.steps` and in-VM exec wiring.
 
+### Changed
+
+- In-VM image: gitlab-runner is pinned to v19.5.1 (`GITLAB_RUNNER_VERSION`
+  build argument) instead of the unpinned `latest` channel, so published
+  images stop carrying a stale or arbitrary toolchain.
+
 ## [v0.1.0] — 2026-05-30
 
 ### Added
